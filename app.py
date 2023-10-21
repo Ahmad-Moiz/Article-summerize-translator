@@ -49,4 +49,3 @@ if st.button("Translate"):
         st.write(translated_summary)
     else:
         st.warning("Please summarize the article before translating.")
-
