@@ -1,5 +1,2 @@
- transformers 
-streamlit 
-torch 
-sumy 
-requests
+transformers
+streamlit
