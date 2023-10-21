@@ -1,37 +1,56 @@
 import streamlit as st
-from transformers import pipeline
+from transformers import pipeline, BartTokenizer, BartForConditionalGeneration
+import sumy
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.lex_rank import LexRankSummarizer
+import requests
+import re
 
-# Create a function to summarize text using the transformers library
-def summarize_text(text):
-    summarizer = pipeline("summarization")
-    summary = summarizer(text, max_length=150, min_length=30, do_sample=False)
-    return summary[0]["summary"]
+# Load the BART model and tokenizer
+model_name = "facebook/bart-large-cnn"
+tokenizer = BartTokenizer.from_pretrained(model_name)
+model = BartForConditionalGeneration.from_pretrained(model_name)
 
-# Streamlit app with enhanced styling
-st.set_page_config(
-    page_title="Article Summarizer",
-    page_icon="📄",
-    layout="centered"
-)
+# Create a function to summarize text using the BART model
+def bart_summarize(text, max_length=150):
+    inputs = tokenizer(text, max_length=max_length, return_tensors="pt", truncation=True)
+    summary_ids = model.generate(inputs.input_ids, max_length=50, min_length=10, length_penalty=2.0, num_beams=4, early_stopping=True)
+    summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+    return summary
 
-st.title("📖 Article Summarizer")
+# Create a function to extract sentences from an article using Sumy
+def extract_sentences(text, num_sentences=3):
+    parser = PlaintextParser.from_string(text, Tokenizer("english"))
+    summarizer = LexRankSummarizer()
+    sentences = summarizer(parser.document, num_sentences)
+    return [str(sentence) for sentence in sentences]
 
-# Create a button to open the summarization modal
-if st.button("Summarize Article"):
-    # Create a text area for user to input the article
-    with st.form("article_form"):
-        st.write("Paste the article you want to summarize below:")
-        article_text = st.text_area("")
+# Streamlit UI
+st.title("Article Summarizer")
 
-        # Create a button to submit the form
-        submit_button = st.form_submit_button("Summarize")
+# Input for article URL
+article_url = st.text_input("Enter the URL of the article you want to summarize:")
 
-    # Check if the form was submitted
-    if submit_button:
-        if article_text:
-            # Call the summarization function
-            summary = summarize_text(article_text)
+if st.button("Summarize"):
+    if not article_url:
+        st.warning("Please enter a valid article URL.")
+    else:
+        try:
+            # Download the article content from the URL
+            response = requests.get(article_url)
+            article_text = response.text
+
+            # Extract sentences using Sumy
+            extracted_sentences = extract_sentences(article_text)
+
+            # Summarize the extracted sentences using BART
+            summary = bart_summarize(" ".join(extracted_sentences))
+
+            # Display the summary
             st.subheader("Summary:")
             st.write(summary)
-        else:
-            st.warning("Please enter an article to summarize.")
+
+        except Exception as e:
+            st.error("An error occurred. Please check the URL or try again later.")
+
