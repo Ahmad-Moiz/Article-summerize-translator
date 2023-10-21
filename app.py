@@ -1,61 +1,52 @@
 import streamlit as st
 from textblob import TextBlob
+from newspaper import Article
+from googletrans import Translator
 
-# Streamlit app with enhanced styling
-st.set_page_config(
-    page_title="Article Summarizer and Translator",
-    page_icon="📚",
-    layout="centered"
-)
+# Function to summarize the article
+def summarize_article(article_url, num_sentences):
+    article = Article(article_url)
+    article.download()
+    article.parse()
+    article.nlp()
+    summary = article.summary
 
-# Function to summarize text
-def summarize_text(text, num_sentences):
-    blob = TextBlob(text)
-    summarized_text = blob.sentences[:num_sentences]
-    return " ".join(map(str, summarized_text))
+    blob = TextBlob(summary)
+    if num_sentences and num_sentences < len(blob.sentences):
+        summary = ' '.join(blob.sentences[:num_sentences])
+
+    return summary
 
 # Function to translate text
-def translate_text(text, source_lang, target_lang):
-    blob = TextBlob(text)
-    translated_text = blob.translate(to=target_lang)
-    return str(translated_text)
+def translate_text(text, target_language):
+    translator = Translator()
+    translated_text = translator.translate(text, dest=target_language)
+    return translated_text.text
 
-st.title("📝 Article Summarizer and Translator")
+st.title("Article Summarizer and Translator")
 
-# Article input
-article = st.text_area("Enter the article text:")
+# Input for article URL
+article_url = st.text_input("Enter the URL of the article to summarize:")
 
-# Summarization
+# Input for the number of sentences in the summary
+num_sentences = st.number_input("Number of sentences in the summary (0 for full summary):", min_value=0, format="%d")
+
 if st.button("Summarize"):
-    num_sentences = st.slider("Number of Sentences in Summary", 1, 10, 3)
-    if article:
-        summarized_text = summarize_text(article, num_sentences)
+    if article_url:
+        summary = summarize_article(article_url, num_sentences)
         st.subheader("Summary:")
-        st.write(summarized_text)
+        st.write(summary)
+    else:
+        st.warning("Please enter the URL of the article to summarize.")
 
-# Translation
+# Language selection for translation
+target_language = st.selectbox("Select target language for translation:", ['en', 'es', 'fr', 'de', 'ja', 'ko'])
+
 if st.button("Translate"):
-    if article:
-        source_lang = st.selectbox("Select source language:", ["auto", "en", "fr", "es", "de", "ja", "ko"])
-        target_lang = st.selectbox("Select target language:", ["en", "fr", "es", "de", "ja", "ko"])
-        if source_lang != "auto":
-            st.write(f"Translating from {source_lang} to {target_lang}...")
-            translated_text = translate_text(article, source_lang, target_lang)
-            st.subheader("Translated Text:")
-            st.write(translated_text)
+    if 'summary' in locals():
+        translated_summary = translate_text(summary, target_language)
+        st.subheader("Translated Summary:")
+        st.write(translated_summary)
+    else:
+        st.warning("Please summarize the article before translating.")
 
-st.text("")
-
-# Custom styling for the button
-st.markdown(
-    """
-    <style>
-    div.stButton > button:first-child {
-        background-color: #ff7f50;
-        color: white;
-        font-family: 'Arial', sans-serif;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
