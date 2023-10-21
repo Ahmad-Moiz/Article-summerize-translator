@@ -1,3 +1,5 @@
-streamlit
-transformers
-tensorflow
+ transformers 
+streamlit 
+torch 
+sumy 
+requests
