@@ -1,4 +1,4 @@
 streamlit==1.1.0
-textblob==0.16.0
+textblob==0.15.3
 newspaper3k==0.2.8
 googletrans==4.0.0-rc1
