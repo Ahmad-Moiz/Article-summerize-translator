@@ -1,51 +1,37 @@
 import streamlit as st
-from textblob import TextBlob
-from newspaper import Article
-from googletrans import Translator
+from transformers import pipeline
 
-# Function to summarize the article
-def summarize_article(article_url, num_sentences):
-    article = Article(article_url)
-    article.download()
-    article.parse()
-    article.nlp()
-    summary = article.summary
+# Title and description
+st.title("Article Summarizer")
+st.write("Enter an article and get a summary.")
 
-    blob = TextBlob(summary)
-    if num_sentences and num_sentences < len(blob.sentences):
-        summary = ' '.join(blob.sentences[:num_sentences])
+# Text input
+article = st.text_area("Enter the article here:")
 
-    return summary
+# Check if article is provided
+if not article:
+    st.warning("Please enter an article to summarize.")
+else:
+    # Create a modal for the summary
+    with st.spinner("Summarizing..."):
+        summarizer = pipeline("summarization")
+        summary = summarizer(article, max_length=150, min_length=30, do_sample=False)
 
-# Function to translate text
-def translate_text(text, target_language):
-    translator = Translator()
-    translated_text = translator.translate(text, dest=target_language)
-    return translated_text.text
+    # Display the summary
+    st.subheader("Summary:")
+    st.write(summary[0]["summary"])
 
-st.title("Article Summarizer and Translator")
+# Optional: Add a "Learn more" link
+st.write("Learn more at [Hugging Face Transformers](https://huggingface.co/models)")
 
-# Input for article URL
-article_url = st.text_input("Enter the URL of the article to summarize:")
+# (Optional) Footer text
+st.markdown(
+    """
+    ---
 
-# Input for the number of sentences in the summary
-num_sentences = st.number_input("Number of sentences in the summary (0 for full summary):", min_value=0, format="%d")
+    Made with ❤️ by Your Name
 
-if st.button("Summarize"):
-    if article_url:
-        summary = summarize_article(article_url, num_sentences)
-        st.subheader("Summary:")
-        st.write(summary)
-    else:
-        st.warning("Please enter the URL of the article to summarize.")
+    [GitHub Repository](https://github.com/yourusername/your-repo)
 
-# Language selection for translation
-target_language = st.selectbox("Select target language for translation:", ['en', 'es', 'fr', 'de', 'ja', 'ko'])
-
-if st.button("Translate"):
-    if 'summary' in locals():
-        translated_summary = translate_text(summary, target_language)
-        st.subheader("Translated Summary:")
-        st.write(translated_summary)
-    else:
-        st.warning("Please summarize the article before translating.")
+    """
+)
